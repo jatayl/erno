@@ -1,3 +1,5 @@
+// we can use this instead of u32
+
 use std::{default, fmt};
 
 use colored::Colorize;
@@ -29,12 +31,114 @@ impl Color {
     }
 }
 
-// maybe could make a 144 bit thing instead of (192)
+#[derive(Clone, Copy)]
+pub struct Rotation {
+    face: Face,
+    dir: Direction,
+}
+
+impl Rotation {
+    pub fn new(face: Face, dir: Direction) -> Self {
+        Rotation { face, dir }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Cw,
+    Ccw,
+}
+
+#[derive(Clone, Copy)]
+pub enum Face {
+    U,
+    L,
+    F,
+    R,
+    B,
+    D,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
-struct Cube {
+pub struct Cube {
     // index 0 to 5 (white, blue, red, green, orange, yellow)
-    // within the u32
+    // could compress this to u24
     faces: [u32; 6],
+}
+
+impl Cube {
+    pub fn is_solved(&self) -> bool {
+        *self == Cube::default()
+    }
+
+    pub fn rotate(&self, rotation: Rotation) -> Self {
+        let mut copy = self.clone();
+        copy.rotate_in_place(rotation);
+        copy
+    }
+
+    pub fn rotate_in_place(&mut self, rotation: Rotation) {
+        // this will be fun to implement
+        let face_index = rotation.face as usize;
+        if rotation.dir == Direction::Cw {
+            self.faces[face_index] = self.faces[face_index].rotate_right(4 * 2);
+        } else {
+            self.faces[face_index] = self.faces[face_index].rotate_left(4 * 2);
+        }
+
+        // maybe make this more explainable
+        // this is for ccw
+        let emb = match rotation.face {
+            Face::U => [(1, 0), (2, 0), (3, 0), (4, 0)],
+            Face::L => [(0, 6), (2, 6), (5, 6), (4, 2)],
+            Face::F => [(3, 6), (5, 0), (1, 2), (0, 4)],
+            Face::R => [(0, 2), (4, 6), (5, 2), (2, 2)],
+            Face::B => [(0, 0), (1, 6), (5, 4), (3, 2)],
+            Face::D => [(2, 4), (3, 4), (4, 4), (1, 4)],
+        };
+
+        let emb_inter = itertools::zip(&emb, &emb[1..]);
+
+        let emb_inter: Vec<_> = if rotation.dir == Direction::Cw {
+            emb_inter.rev().collect()
+        } else {
+            emb_inter.collect()
+        };
+
+        for (&(face_l, sticker_l), &(face_r, sticker_r)) in emb_inter.into_iter() {
+            // need swap helper function that swaps two stickers
+            self.swap_stickers((face_l, sticker_l), (face_r, sticker_r));
+            self.swap_stickers((face_l, (sticker_l + 1) % 8), (face_r, (sticker_r + 1) % 8));
+            self.swap_stickers((face_l, (sticker_l + 2) % 8), (face_r, (sticker_r + 2) % 8));
+        }
+    }
+
+    pub fn rotate_many(&self, rotations: impl AsRef<[Rotation]>) -> Self {
+        let mut copy = self.clone();
+        copy.rotate_many_in_place(rotations);
+        copy
+    }
+
+    pub fn rotate_many_in_place(&mut self, rotations: impl AsRef<[Rotation]>) {
+        let rotations = rotations.as_ref();
+        for &r in rotations.iter() {
+            self.rotate_in_place(r);
+        }
+    }
+
+    #[inline]
+    fn swap_stickers(&mut self, left: (usize, usize), right: (usize, usize)) {
+        let (face_left, sticker_left_i) = left;
+        let (face_right, sticker_right_i) = right;
+
+        let sticker_left = (self.faces[face_left] >> (sticker_left_i * 4)) & 0x7;
+        let sticker_right = (self.faces[face_right] >> (sticker_right_i * 4)) & 0x7;
+
+        let stickers_swap = sticker_left ^ sticker_right;
+
+        self.faces[face_left] ^= stickers_swap << (sticker_left_i * 4);
+        self.faces[face_right] ^= stickers_swap << (sticker_right_i * 4);
+    }
 }
 
 // would be nice to have a convienience function for each sticker
@@ -43,8 +147,8 @@ impl fmt::Display for Cube {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let format_top = |face: &[String]| format!(" {} {} {} ", face[0], face[1], face[2]);
         let format_mid =
-            |face: &[String], c: Color| format!(" {} {} {} ", face[3], c.to_abbr(), face[4]);
-        let format_bot = |face: &[String]| format!(" {} {} {} ", face[5], face[6], face[7]);
+            |face: &[String], c: Color| format!(" {} {} {} ", face[7], c.to_abbr(), face[3]);
+        let format_bot = |face: &[String]| format!(" {} {} {} ", face[6], face[5], face[4]);
 
         let faces: Vec<Vec<_>> = self
             .faces
@@ -110,12 +214,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
-        let c = Cube::default();
+    fn is_solved() {
+        let mut c = Cube::default();
+        assert!(c.is_solved());
 
-        println!("size: {} bytes", std::mem::size_of::<Cube>());
+        c.rotate_in_place(Rotation::new(Face::B, Direction::Ccw));
+        assert!(!c.is_solved());
+
+        c.rotate_in_place(Rotation::new(Face::B, Direction::Cw));
+        assert!(c.is_solved());
+    }
+
+    #[test]
+    fn swap_stickers() {
+        // reflexive
+        let mut a = Cube::default();
+        let mut b = Cube::default();
+        a.swap_stickers((0, 1), (3, 4));
+        b.swap_stickers((3, 4), (0, 1));
+        assert_eq!(a, b);
+
+        // inverse
+        let mut a = Cube::default();
+        a.swap_stickers((0, 1), (3, 4));
+        a.swap_stickers((3, 4), (0, 1));
+        assert_eq!(a, Cube::default());
+    }
+
+    #[test]
+    fn playpen() {
+        let mut c = Cube::default();
+
+        c.rotate_in_place(Rotation::new(Face::B, Direction::Ccw));
+        // c.rotate_in_place(Rotation::new(Face::R, Direction::Cw));
 
         println!("{}", c);
-        panic!()
+
+        panic!();
     }
 }
