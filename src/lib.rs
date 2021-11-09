@@ -81,15 +81,15 @@ impl Cube {
         // this will be fun to implement
         let face_index = rotation.face as usize;
         if rotation.dir == Direction::Cw {
-            self.faces[face_index] = self.faces[face_index].rotate_right(4 * 2);
-        } else {
             self.faces[face_index] = self.faces[face_index].rotate_left(4 * 2);
+        } else {
+            self.faces[face_index] = self.faces[face_index].rotate_right(4 * 2);
         }
 
         // maybe make this more explainable
         // this is for ccw
         let emb = match rotation.face {
-            Face::U => [(1, 0), (2, 0), (3, 0), (4, 0)],
+            Face::U => [(4, 0), (3, 0), (2, 0), (1, 0)],
             Face::L => [(0, 6), (2, 6), (5, 6), (4, 2)],
             Face::F => [(3, 6), (5, 0), (1, 2), (0, 4)],
             Face::R => [(0, 2), (4, 6), (5, 2), (2, 2)],
@@ -97,7 +97,7 @@ impl Cube {
             Face::D => [(2, 4), (3, 4), (4, 4), (1, 4)],
         };
 
-        let emb_inter = itertools::zip(&emb, &emb[1..]);
+        let emb_inter = emb.iter().zip(emb[1..].iter());
 
         let emb_inter: Vec<_> = if rotation.dir == Direction::Cw {
             emb_inter.rev().collect()
@@ -242,14 +242,66 @@ mod tests {
     }
 
     #[test]
-    fn playpen() {
+    fn rotate_order() {
         let mut c = Cube::default();
 
-        c.rotate_in_place(Rotation::new(Face::B, Direction::Ccw));
-        // c.rotate_in_place(Rotation::new(Face::R, Direction::Cw));
+        // this would be a cool declarative macro
+        // let p = permutation!(R U' R' U); // ?
 
-        println!("{}", c);
+        let p = [
+            Rotation::new(Face::R, Direction::Cw),
+            Rotation::new(Face::U, Direction::Ccw),
+            Rotation::new(Face::R, Direction::Ccw),
+            Rotation::new(Face::U, Direction::Cw),
+        ];
+        for _ in 0..6 {
+            c.rotate_many_in_place(p);
+        }
+        assert_eq!(c, Cube::default());
 
-        panic!();
+        let t_perm = [
+            Rotation::new(Face::R, Direction::Cw),
+            Rotation::new(Face::U, Direction::Cw),
+            Rotation::new(Face::R, Direction::Ccw),
+            Rotation::new(Face::U, Direction::Ccw),
+            Rotation::new(Face::R, Direction::Ccw),
+            Rotation::new(Face::F, Direction::Cw),
+            Rotation::new(Face::R, Direction::Cw),
+            Rotation::new(Face::R, Direction::Cw),
+            Rotation::new(Face::U, Direction::Ccw),
+            Rotation::new(Face::R, Direction::Ccw),
+            Rotation::new(Face::U, Direction::Ccw),
+            Rotation::new(Face::R, Direction::Cw),
+            Rotation::new(Face::U, Direction::Cw),
+            Rotation::new(Face::R, Direction::Ccw),
+            Rotation::new(Face::F, Direction::Ccw),
+        ];
+        for _ in 0..2 {
+            c.rotate_many_in_place(t_perm);
+            println!("{}", c);
+        }
+        assert_eq!(c, Cube::default());
+
+        let back_t_perm = [
+            Rotation::new(Face::L, Direction::Ccw),
+            Rotation::new(Face::D, Direction::Ccw),
+            Rotation::new(Face::L, Direction::Cw),
+            Rotation::new(Face::D, Direction::Cw),
+            Rotation::new(Face::L, Direction::Cw),
+            Rotation::new(Face::B, Direction::Ccw),
+            Rotation::new(Face::L, Direction::Ccw),
+            Rotation::new(Face::L, Direction::Ccw),
+            Rotation::new(Face::D, Direction::Cw),
+            Rotation::new(Face::L, Direction::Cw),
+            Rotation::new(Face::D, Direction::Cw),
+            Rotation::new(Face::L, Direction::Ccw),
+            Rotation::new(Face::D, Direction::Ccw),
+            Rotation::new(Face::L, Direction::Cw),
+            Rotation::new(Face::B, Direction::Cw),
+        ];
+        for _ in 0..2 {
+            c.rotate_many_in_place(back_t_perm);
+        }
+        assert_eq!(c, Cube::default());
     }
 }
