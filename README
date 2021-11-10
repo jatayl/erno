@@ -1,0 +1,40 @@
+3x3x3 rubiks cube enviroment
+                in Rust
+
+example usage
+
+```
+use erno::{Cube, Rotation, Face, Direction};
+
+let mut cube = Cube::default();
+// rotate upper face clockwise
+cube.rotate_in_place(Rotation::new(Face::U, Direction::Cw));
+
+// alernatively use the nonmutating function
+let cube = Cube::default();
+let cube = cube.rotate(Rotation::new(Face::U, Direction::Cw));
+
+// or execute many at once
+let mut cube = Cube::default();
+let perm = [
+    Rotation::new(Face::R, Direction::Cw),
+    Rotation::new(Face::U, Direction::Ccw),
+    Rotation::new(Face::R, Direction::Ccw),
+    Rotation::new(Face::U, Direction::Cw),
+];
+cube.rotate_many_in_place(perm);
+
+// pretty print
+println!("{}", cube);
+```
+
+Cw and Ccw correspond to clockwise and counter-clockwise rotations respectively
+
+The faces correspond to the following sides of cube
+    +---+
+    | U |
++---+---+---+---+
+| L | F | R | B |
++---+---+---+---+
+    | D |
+    +---+
