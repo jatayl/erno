@@ -9,3 +9,7 @@ edition = "2018"
 colored = "2"
 num-traits = "0.2"
 num-derive = "0.2"
+rand = { version = "0.8", optional = true }
+
+[features]
+sample = ["rand"]

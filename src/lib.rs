@@ -8,6 +8,12 @@ use colored::Colorize;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+#[cfg(feature = "sample")]
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
+
 #[derive(FromPrimitive)]
 enum Color {
     White,
@@ -31,7 +37,7 @@ impl Color {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Rotation {
     face: Face,
     dir: Direction,
@@ -43,13 +49,32 @@ impl Rotation {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg(feature = "sample")]
+impl Distribution<Rotation> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, _: &mut R) -> Rotation {
+        let face = rand::random();
+        let dir = rand::random();
+        Rotation { face, dir }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     Cw,
     Ccw,
 }
 
-#[derive(Clone, Copy)]
+#[cfg(feature = "sample")]
+impl Distribution<Direction> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Direction {
+        match rng.gen_range(0..2) {
+            0 => Direction::Cw,
+            _ => Direction::Ccw,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Face {
     U,
     L,
@@ -57,6 +82,20 @@ pub enum Face {
     R,
     B,
     D,
+}
+
+#[cfg(feature = "sample")]
+impl Distribution<Face> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Face {
+        match rng.gen_range(0..6) {
+            0 => Face::U,
+            1 => Face::L,
+            2 => Face::F,
+            3 => Face::R,
+            4 => Face::B,
+            _ => Face::D,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
