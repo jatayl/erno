@@ -1,10 +1,7 @@
-// we can use this instead of u32
-
 use std::{default, fmt};
 
 use colored::Colorize;
 
-// do we want this??
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -117,7 +114,6 @@ impl Cube {
     }
 
     pub fn rotate_in_place(&mut self, rotation: Rotation) {
-        // this will be fun to implement
         let face_index = rotation.face as usize;
         if rotation.dir == Direction::Cw {
             self.faces[face_index] = self.faces[face_index].rotate_left(4 * 2);
@@ -145,10 +141,7 @@ impl Cube {
         };
 
         for (&(face_l, sticker_l), &(face_r, sticker_r)) in emb_inter.into_iter() {
-            // need swap helper function that swaps two stickers
-            self.swap_stickers((face_l, sticker_l), (face_r, sticker_r));
-            self.swap_stickers((face_l, (sticker_l + 1) % 8), (face_r, (sticker_r + 1) % 8));
-            self.swap_stickers((face_l, (sticker_l + 2) % 8), (face_r, (sticker_r + 2) % 8));
+            self.swap_3_block_stickers((face_l, sticker_l), (face_r, sticker_r));
         }
     }
 
@@ -166,21 +159,19 @@ impl Cube {
     }
 
     #[inline]
-    fn swap_stickers(&mut self, left: (usize, usize), right: (usize, usize)) {
+    fn swap_3_block_stickers(&mut self, left: (usize, u32), right: (usize, u32)) {
         let (face_left, sticker_left_i) = left;
         let (face_right, sticker_right_i) = right;
 
-        let sticker_left = (self.faces[face_left] >> (sticker_left_i * 4)) & 0x7;
-        let sticker_right = (self.faces[face_right] >> (sticker_right_i * 4)) & 0x7;
+        let sticker_left = self.faces[face_left].rotate_right(sticker_left_i * 4) & 0xfff;
+        let sticker_right = self.faces[face_right].rotate_right(sticker_right_i * 4) & 0xfff;
 
         let stickers_swap = sticker_left ^ sticker_right;
 
-        self.faces[face_left] ^= stickers_swap << (sticker_left_i * 4);
-        self.faces[face_right] ^= stickers_swap << (sticker_right_i * 4);
+        self.faces[face_left] ^= stickers_swap.rotate_left(sticker_left_i * 4);
+        self.faces[face_right] ^= stickers_swap.rotate_left(sticker_right_i * 4);
     }
 }
-
-// would be nice to have a convienience function for each sticker
 
 impl fmt::Display for Cube {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -265,18 +256,18 @@ mod tests {
     }
 
     #[test]
-    fn swap_stickers() {
+    fn swap_3_block_stickers() {
         // reflexive
         let mut a = Cube::default();
         let mut b = Cube::default();
-        a.swap_stickers((0, 1), (3, 4));
-        b.swap_stickers((3, 4), (0, 1));
+        a.swap_3_block_stickers((0, 1), (3, 4));
+        b.swap_3_block_stickers((3, 4), (0, 1));
         assert_eq!(a, b);
 
         // inverse
         let mut a = Cube::default();
-        a.swap_stickers((0, 1), (3, 4));
-        a.swap_stickers((3, 4), (0, 1));
+        a.swap_3_block_stickers((0, 1), (3, 4));
+        a.swap_3_block_stickers((3, 4), (0, 1));
         assert_eq!(a, Cube::default());
     }
 
