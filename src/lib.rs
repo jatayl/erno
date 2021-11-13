@@ -46,6 +46,27 @@ impl Rotation {
     }
 }
 
+impl fmt::Display for Rotation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let face_str = match self.face {
+            Face::U => "U",
+            Face::L => "L",
+            Face::F => "F",
+            Face::R => "R",
+            Face::B => "B",
+            Face::D => "D",
+        };
+
+        write!(f, "{}", face_str)?;
+
+        if self.dir == Direction::Ccw {
+            write!(f, "'")?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(feature = "sample")]
 impl Distribution<Rotation> for Standard {
     fn sample<R: Rng + ?Sized>(&self, _: &mut R) -> Rotation {
